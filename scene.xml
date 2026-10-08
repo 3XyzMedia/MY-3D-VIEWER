@@ -2,7 +2,7 @@
     <image>
         <!-- rx=0, rz=180: PLY Z (шпиль=Blender Z) -> krpano Z (к зрителю) -->
         <!-- rz=180 фиксит зеркальность: выступающая часть с той же стороны, что в Blender -->
-        <splats url="https://bucket.example.com/model.spz" scale="1.0" tx="0" ty="0" tz="0" rx="0" ry="0" rz="180" rotationorder="YXZ" antialias="0.30" />
+        <splats url="https://tranquil-gecko-49e948.netlify.app/model.spz" scale="1.0" tx="0" ty="0" tz="0" rx="0" ry="0" rz="180" rotationorder="YXZ" antialias="0.30" />
     </image>
     <display>
         <splats rendermode="perspective" sortmode="distance" streaming="true" scale="0.25" debug="0" />
