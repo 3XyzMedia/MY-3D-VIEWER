@@ -2,7 +2,7 @@
     <image>
         <!-- rx=0, rz=180: PLY Z (шпиль=Blender Z) -> krpano Z (к зрителю) -->
         <!-- rz=180 фиксит зеркальность: выступающая часть с той же стороны, что в Blender -->
-        <splats url="https://raw.githubusercontent.com/3XyzMedia/MY-3D-VIEWER/B1.0/model.spz" pivot="https://raw.githubusercontent.com/3XyzMedia/MY-3D-VIEWER/main/pivot.json" scale="1.0" tx="0" ty="0" tz="0" rx="0" ry="0" rz="180" rotationorder="YXZ" antialias="0.30" />
+        <splats url="https://raw.githubusercontent.com/3XyzMedia/MY-3D-VIEWER/B1.0/model.spz" pivot="model/pivot.json" scale="1.0" tx="0" ty="0" tz="0" rx="0" ry="0" rz="180" rotationorder="YXZ" antialias="0.30" />
     </image>
     <view hlookat="0" vlookat="0" roll="0" tx="0" ty="0" tz="200" fovtype="VFOV" fov="70" fovmin="15" fovmax="150" maxtilt="179" mintilt="-179" />
     <control locked="true" />
