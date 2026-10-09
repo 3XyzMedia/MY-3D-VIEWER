@@ -1,8 +1,7 @@
 <krpano version="1.24" title="3XyzMedia RGB Bridge™ — Gaussian Viewer v4.14">
     <image>
-        <!-- Обратите внимание: & заменено на &amp; -->
-        <splats url="https://drive.google.com/uc?export=download&amp;id=1gnYNAuy-0L_zwr3XpUcWOBSMKGn73OF9"
-                pivot="model/pivot.json"
+        <splats url="https://github.com/3XyzMedia/MY-3D-VIEWER/releases/download/v1.0/model.spz"
+                pivot="https://github.com/3XyzMedia/MY-3D-VIEWER/releases/download/v1.0/pivot.json"
                 scale="1.0"
                 tx="0" ty="0" tz="0"
                 rx="0" ry="0" rz="180"
