@@ -180,9 +180,9 @@ surface.addEventListener('pointermove',ev=>{
     distance=clamp(g.camDistance*ratio,BASE_DISTANCE*.00001,BASE_DISTANCE*100000);
     const c=cameraState(),s=Math.max(.00001,g.camDistance*.0024);
     const dx=m.cx-g.cx,dy=m.cy-g.cy;
-    pan.x=g.pan.x+c.right.x*(-dx*s)+c.up.x*(dy*s);
-    pan.y=g.pan.y+c.right.y*(-dx*s)+c.up.y*(dy*s);
-    pan.z=g.pan.z+c.right.z*(-dx*s)+c.up.z*(dy*s);
+    pan.x=g.pan.x+c.right.x*(dx*s)+c.up.x*(-dy*s);
+    pan.y=g.pan.y+c.right.y*(dx*s)+c.up.y*(-dy*s);
+    pan.z=g.pan.z+c.right.z*(dx*s)+c.up.z*(-dy*s);
     distEl.value=multiplierToSlider(distance/BASE_DISTANCE);applyDistance();return;
   }
   if(!gesture||gesture.type!=='single')beginGesture();
