@@ -188,7 +188,7 @@ surface.addEventListener('pointermove',ev=>{
   if(!gesture||gesture.type!=='single')beginGesture();
   const g=gesture;if(!g||g.type!=='single')return;
   const dx=ev.clientX-g.x,dy=ev.clientY-g.y;
-  if(dragMode==='orbit'){yaw=g.yaw+dx*.32;pitch=clamp(g.pitch+dy*.24,-179,179);updateView()}
+  if(dragMode==='orbit'){yaw=g.yaw+dx*.32;pitch=clamp(g.pitch-dy*.24,-179,179);updateView()}
   else if(dragMode==='roll'){roll=g.roll+deg(screenRollAngle(ev.clientX,ev.clientY)-g.rollAngle);updateView()}
   else if(dragMode==='pan'){const c=cameraState();const s=Math.max(.00001,distance*.0024);pan.x=g.pan.x+c.right.x*(dx*s)+c.up.x*(-dy*s);pan.y=g.pan.y+c.right.y*(dx*s)+c.up.y*(-dy*s);pan.z=g.pan.z+c.right.z*(dx*s)+c.up.z*(-dy*s);updateView()}
 });
