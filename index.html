@@ -604,6 +604,86 @@ window.addEventListener('mousemove', (e) => {
     updateView();
   }
 });
+// Обработка тач-событий для мобильных устройств
+const surface = document.getElementById('surface');
+let touchState = {
+    startX: 0,
+    startY: 0,
+    startYaw: 0,
+    startPitch: 0,
+    startPanX: 0,
+    startPanY: 0,
+    startPanZ: 0,
+    startDist: 0,
+    isDragging: false,
+    touchCount: 0
+};
+
+// Блокируем стандартное поведение браузера
+surface.addEventListener('touchstart', (e) => {
+    if (e.touches.length <= 2) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+surface.addEventListener('touchstart', (e) => {
+    touchState.touchCount = e.touches.length;
+    touchState.startX = e.touches[0].clientX;
+    touchState.startY = e.touches[0].clientY;
+    touchState.startYaw = yaw;
+    touchState.startPitch = pitch;
+    touchState.startPanX = pan.x;
+    touchState.startPanY = pan.y;
+    touchState.startPanZ = pan.z;
+    touchState.startDist = distance;
+    
+    if (touchState.touchCount === 1) {
+        surface.classList.add('dragging');
+    }
+}, { passive: false });
+
+surface.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - touchState.startX;
+    const dy = e.touches[0].clientY - touchState.startY;
+    
+    if (touchState.touchCount === 1) {
+        // Вращение камеры
+        yaw = touchState.startYaw + (dx * 0.5);
+        pitch = touchState.startPitch - (dy * 0.5);
+        updateView();
+    } else if (touchState.touchCount === 2) {
+        // Панорамирование
+        pan.x = touchState.startPanX + (dx * 0.01);
+        pan.y = touchState.startPanY + (dy * 0.01);
+        pan.z = touchState.startPanZ;
+        updateView();
+    }
+}, { passive: false });
+
+surface.addEventListener('touchend', () => {
+    surface.classList.remove('dragging');
+    touchState.touchCount = 0;
+});
+
+// Обработка пинч-зума
+surface.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+        const distStart = Math.hypot(
+            touchState.startX - e.touches[1].clientX,
+            touchState.startY - e.touches[1].clientY
+        );
+        const distNow = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+        
+        const delta = distNow / distStart;
+        const newDist = touchState.startDist * delta;
+        distance = Math.max(10, Math.min(1000, newDist)); // Ограничиваем зум
+        applyDistance();
+    }
+}, { passive: false });
 
 </script>
 </body>
