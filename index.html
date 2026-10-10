@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>3XyzMedia RGB Bridge&#8482; &#8212; Gaussian Viewer v4.17</title>
+<title>3XyzMedia RGB Bridge&#8482; &#8212; Gaussian Viewer v4.18</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070b;font-family:Arial,sans-serif}
 #pano{position:absolute;inset:0}
@@ -25,6 +25,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070b;fon
 input[type=range]{width:100%;margin:7px 0 12px;cursor:pointer}
 .small{font-size:10px;opacity:.54;margin-top:-6px;margin-bottom:8px;line-height:1.35}.section{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
 .buttons{display:flex;gap:7px;flex-wrap:wrap}button.action{border:0;border-radius:9px;padding:8px 10px;cursor:pointer;background:rgba(255,255,255,.11);color:#fff;border:1px solid rgba(255,255,255,.10);font-size:11px;font-weight:700}button.action.primary{background:#fff;color:#0b0f16}
+#distanceControl{display:flex;align-items:center;gap:8px}#distanceControl input[type=range]{flex:1;min-width:0;width:auto;margin:7px 0 12px}#distLock{flex:0 0 auto;min-width:38px;padding:7px 9px}#distLock.locked{background:#fff;color:#0b0f16}input[type=range]:disabled{opacity:.42;cursor:not-allowed}
 #shareUrl{width:100%;box-sizing:border-box;margin-top:8px;padding:8px 9px;border-radius:9px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:#dfe8f7;font:10px Consolas,monospace}
 #shareLink{display:block;margin-top:7px;color:#dfe8f7;font-size:10px;text-decoration:none;opacity:.82}#shareLink:hover{text-decoration:underline;opacity:1}
 #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);z-index:90;padding:9px 13px;border-radius:10px;background:rgba(5,8,14,.88);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:11px;opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease}#toast.show{opacity:1;transform:translate(-50%,0)}
@@ -41,7 +42,7 @@ input[type=range]{width:100%;margin:7px 0 12px;cursor:pointer}
 <button id="panelToggle" title="Настройки">&#9881;</button>
 <div id="panel" class="collapsed"><div id="panelInner">
   <div class="row"><span class="label">Camera distance</span><span class="val" id="distValue">1.00&times;</span></div>
-  <input id="dist" type="range" min="0" max="1000" step="1" value="430"><div class="small">Логарифмическая шкала: 0.005&times; &#8230; 100000&times;.</div>
+  <div id="distanceControl"><input id="dist" type="range" min="0" max="1000" step="1" value="570"><button class="action" id="distLock" type="button" title="Зафиксировать дистанцию" aria-pressed="false">&#128275;</button></div><div class="small">Дистанция: влево — дальше, вправо — ближе. Замок фиксирует дистанцию и отключает zoom.</div>
   <div class="row"><span class="label">Splat size</span><span class="val" id="scaleValue">0.25&times;</span></div><input id="scale" type="range" min="0.01" max="1.00" step="0.01" value="0.25">
   <div class="row"><span class="label">Screen minimum</span><span class="val" id="aaValue">0.30 px</span></div><input id="aa" type="range" min="0.00" max="2.00" step="0.05" value="0.30">
   
@@ -60,6 +61,7 @@ let k=null;
 const BASE_DISTANCE=200;
 let pivot={x:0,y:0,z:0};
 let yaw=0, pitch=0, roll=0, distance=BASE_DISTANCE;
+let distanceLocked=false, sharedStartState=null;
 let pan={x:0,y:0,z:0};
 let dragging=false, dragMode=null, startX=0,startY=0,startYaw=0,startPitch=0,startRoll=0,startPan={x:0,y:0,z:0},startRollAngle=0;
 let playOn=false,playAnim=0,playLast=0,playSpeedDeg=3,playAngle=0;
@@ -67,7 +69,7 @@ let axesOn=true, sortIndex=0, perspective=true;
 let upAxis='Z';
 const upAxisRotations={'Z':{rx:0,ry:0,rz:180},'-Z':{rx:180,ry:0,rz:180},'Y':{rx:-90,ry:0,rz:0},'-Y':{rx:90,ry:0,rz:0},'X':{rx:0,ry:90,rz:0},'-X':{rx:0,ry:-90,rz:0}};
 const upAxisGizmo={'Z':{X:{x:1,y:0,z:0},Y:{x:0,y:1,z:0},Z:{x:0,y:0,z:1}},'-Z':{X:{x:1,y:0,z:0},Y:{x:0,y:-1,z:0},Z:{x:0,y:0,z:-1}},'Y':{X:{x:1,y:0,z:0},Y:{x:0,y:0,z:1},Z:{x:0,y:1,z:0}},'-Y':{X:{x:1,y:0,z:0},Y:{x:0,y:0,z:-1},Z:{x:0,y:-1,z:0}},'X':{X:{x:0,y:0,z:-1},Y:{x:0,y:1,z:0},Z:{x:1,y:0,z:0}},'-X':{X:{x:0,y:0,z:1},Y:{x:0,y:1,z:0},Z:{x:-1,y:0,z:0}}};
-function setUpAxis(axis){upAxis=axis;const rot=upAxisRotations[axis];if(k){k.set('image.splats.rx',rot.rx);k.set('image.splats.ry',rot.ry);k.set('image.splats.rz',rot.rz);k.call('view.update();display.splats.update();')}var displayText=axis==='Z'?'Z (AutoCAD)':axis+'\u2191';document.getElementById('upAxisValue').textContent=displayText;['upZ','upMinusZ','upY','upMinusY','upX','upMinusX'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('primary')});var btnId='up'+axis.replace('-','Minus');var btn=document.getElementById(btnId);if(btn)btn.classList.add('primary');stopPlay();playAngle=0;pan={x:0,y:0,z:0};yaw=0;pitch=0;roll=0;distance=BASE_DISTANCE;distEl.value=430;applyDistance();showToast('Up axis: '+axis+'\u2191 \u2014 PLAY \u043a\u0440\u0443\u0442\u0438\u0442 \u0432\u043e\u043a\u0440\u0443\u0433 '+axis+' \u2713')}
+function setUpAxis(axis){upAxis=axis;const rot=upAxisRotations[axis];if(k){k.set('image.splats.rx',rot.rx);k.set('image.splats.ry',rot.ry);k.set('image.splats.rz',rot.rz);k.call('view.update();display.splats.update();')}var displayText=axis==='Z'?'Z (AutoCAD)':axis+'\u2191';document.getElementById('upAxisValue').textContent=displayText;['upZ','upMinusZ','upY','upMinusY','upX','upMinusX'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('primary')});var btnId='up'+axis.replace('-','Minus');var btn=document.getElementById(btnId);if(btn)btn.classList.add('primary');stopPlay();playAngle=0;pan={x:0,y:0,z:0};yaw=0;pitch=0;roll=0;distance=BASE_DISTANCE;distEl.value=570;applyDistance();showToast('Up axis: '+axis+'\u2191 \u2014 PLAY \u043a\u0440\u0443\u0442\u0438\u0442 \u0432\u043e\u043a\u0440\u0443\u0433 '+axis+' \u2713')}
 const surface=document.getElementById('surface'), axesCanvas=document.getElementById('axesCanvas'), ctx=axesCanvas.getContext('2d');
 const distEl=document.getElementById('dist'),scaleEl=document.getElementById('scale'),aaEl=document.getElementById('aa'),speedEl=document.getElementById('speed');
 const shareLinkEl=document.getElementById('shareLink');
@@ -78,8 +80,8 @@ function norm(v){const l=Math.hypot(v.x,v.y,v.z)||1;return{x:v.x/l,y:v.y/l,z:v.z
 function dot(a,b){return a.x*b.x+a.y*b.y+a.z*b.z}
 function cross(a,b){return{x:a.y*b.z-a.z*b.y,y:a.z*b.x-a.x*b.z,z:a.x*b.y-a.y*b.x}}
 function wrap360(v){v%=360;if(v<0)v+=360;return v}
-function sliderToMultiplier(v){const a=Math.log10(.005),b=Math.log10(100000);return Math.pow(10,a+(v/1000)*(b-a))}
-function multiplierToSlider(m){const a=Math.log10(.005),b=Math.log10(100000);return clamp(((Math.log10(Math.max(.005,Math.min(100000,m)))-a)/(b-a))*1000,0,1000)}
+function sliderToMultiplier(v){const a=Math.log10(.005),b=Math.log10(100000);return Math.pow(10,a+((1000-v)/1000)*(b-a))}
+function multiplierToSlider(m){const a=Math.log10(.005),b=Math.log10(100000);return clamp(1000-((Math.log10(Math.max(.005,Math.min(100000,m)))-a)/(b-a))*1000,0,1000)}
 function cameraState(){
   const sy=Math.sin(rad(yaw)), cy=Math.cos(rad(yaw)), cp=Math.cos(rad(pitch)), sp=Math.sin(rad(pitch));
   const off={x:sy*cp*distance,y:sp*distance,z:cy*cp*distance};
@@ -121,8 +123,8 @@ async function loadPivotFile(){try{const r=await fetch('model/pivot.json',{cache
 function updatePivotUI(){var el=document.getElementById('pivotValue');if(!el)return;el.textContent=pivot.x.toFixed(2)+', '+pivot.y.toFixed(2)+', '+pivot.z.toFixed(2)}
 function setPivot(x,y,z){pivot={x:Number(x),y:Number(y),z:Number(z)};pan={x:0,y:0,z:0};updatePivotUI();updateView();if(k)k.set('control.locked','true');showToast('Pivot \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u2713')}
 function setPivotFromCursor(){return false}
-function resetCamera(){stopPlay();playAngle=0;pan={x:0,y:0,z:0};yaw=0;pitch=0;roll=0;distance=BASE_DISTANCE;distEl.value=430;const base=upAxisRotations[upAxis];if(k){k.set('image.splats.rx',base.rx);k.set('image.splats.ry',base.ry);k.set('image.splats.rz',base.rz);k.call('display.splats.update();');k.set('control.locked','true')}applyDistance();showToast('HOME \u2713')}
-function resetAll(){stopPlay();pivot={x:0,y:0,z:0};updatePivotUI();resetCamera();scaleEl.value=.25;aaEl.value=.30;applyScale();applyAA();sortIndex=0;perspective=true;applySort();applyMode();setUpAxis('Z');showShareUrl('')}
+function resetCamera(){stopPlay();playAngle=0;if(sharedStartState){applyState(JSON.parse(JSON.stringify(sharedStartState)));const base=upAxisRotations[upAxis];if(k){k.set('image.splats.rx',base.rx);k.set('image.splats.ry',base.ry);k.set('image.splats.rz',base.rz);k.call('display.splats.update();');k.set('control.locked','true')}showToast('Исходный вид ссылки восстановлен ✓');return}pan={x:0,y:0,z:0};yaw=0;pitch=0;roll=0;distance=BASE_DISTANCE;distEl.value=570;const base=upAxisRotations[upAxis];if(k){k.set('image.splats.rx',base.rx);k.set('image.splats.ry',base.ry);k.set('image.splats.rz',base.rz);k.call('display.splats.update();');k.set('control.locked','true')}applyDistance();showToast('HOME ✓')}
+function resetAll(){stopPlay();sharedStartState=null;pivot={x:0,y:0,z:0};updatePivotUI();resetCamera();scaleEl.value=.25;aaEl.value=.30;applyScale();applyAA();sortIndex=0;perspective=true;applySort();applyMode();setUpAxis('Z');showShareUrl('')}
 function state(){return {p:[pivot.x,pivot.y,pivot.z],o:[yaw,pitch,roll],d:distance,m:[pan.x,pan.y,pan.z],s:Number(scaleEl.value),a:Number(aaEl.value),q:sortIndex,r:perspective?1:0}}
 function encodeState(st){const buf=new ArrayBuffer(45),dv=new DataView(buf);dv.setUint8(0,1);let off=1;for(const n of [st.p[0],st.p[1],st.p[2],st.o[0],st.o[1],st.o[2],st.d,st.m[0],st.m[1],st.m[2]]){dv.setFloat32(off,n,true);off+=4}dv.setUint8(41,Math.round(clamp(st.s*100,1,100)));dv.setUint8(42,Math.round(clamp(st.a*20,0,40)));dv.setUint8(43,clamp(st.q|0,0,3));dv.setUint8(44,st.r?1:0);return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function decodeState(token){try{token=token.replace(/-/g,'+').replace(/_/g,'/');while(token.length%4)token+='=';const b=atob(token),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);const dv=new DataView(u.buffer);if(dv.getUint8(0)!==1||u.length<45)return null;let off=1,a=[];for(let i=0;i<10;i++){a.push(dv.getFloat32(off,true));off+=4}return {p:a.slice(0,3),o:a.slice(3,6),d:a[6],m:a.slice(7,10),s:u[41],a:u[42],q:u[43],r:u[44]}}catch(e){return null}}
@@ -177,13 +179,13 @@ surface.addEventListener('pointermove',ev=>{
     const g=gesture;if(!g||g.type!=='pinch')return;
     // Pinch distance scales camera distance; moving the midpoint pans the view.
     const ratio=g.distance/m.distance;
-    distance=clamp(g.camDistance*ratio,BASE_DISTANCE*.00001,BASE_DISTANCE*100000);
+    if(!distanceLocked) distance=clamp(g.camDistance*ratio,BASE_DISTANCE*.00001,BASE_DISTANCE*100000);
     const c=cameraState(),s=Math.max(.00001,g.camDistance*.0024);
     const dx=m.cx-g.cx,dy=m.cy-g.cy;
     pan.x=g.pan.x+c.right.x*(dx*s)+c.up.x*(-dy*s);
     pan.y=g.pan.y+c.right.y*(dx*s)+c.up.y*(-dy*s);
     pan.z=g.pan.z+c.right.z*(dx*s)+c.up.z*(-dy*s);
-    distEl.value=multiplierToSlider(distance/BASE_DISTANCE);applyDistance();return;
+    distEl.value=multiplierToSlider(distance/BASE_DISTANCE);if(!distanceLocked)applyDistance();else updateView();return;
   }
   if(!gesture||gesture.type!=='single')beginGesture();
   const g=gesture;if(!g||g.type!=='single')return;
@@ -200,7 +202,7 @@ function finishPointer(ev){
 surface.addEventListener('pointerup',finishPointer);
 surface.addEventListener('pointercancel',finishPointer);
 surface.addEventListener('lostpointercapture',ev=>{if(activePointers.has(ev.pointerId))finishPointer(ev)});
-surface.addEventListener('wheel',ev=>{ev.preventDefault();ev.stopPropagation();stopPlay();const factor=ev.deltaY>0?1.085:1/1.085;distance=clamp(distance*factor,BASE_DISTANCE*.00001,BASE_DISTANCE*100000);distEl.value=multiplierToSlider(distance/BASE_DISTANCE);applyDistance()},{passive:false});
+surface.addEventListener('wheel',ev=>{ev.preventDefault();ev.stopPropagation();if(distanceLocked)return;stopPlay();const factor=ev.deltaY>0?1.085:1/1.085;distance=clamp(distance*factor,BASE_DISTANCE*.00001,BASE_DISTANCE*100000);distEl.value=multiplierToSlider(distance/BASE_DISTANCE);applyDistance()},{passive:false});
 /* dblclick removed */
 /* Block ALL mouse events from bubbling to krpano (it listens on window/document) */
 ['mousedown','mouseup','mousemove','click','dblclick'].forEach(function(t){
@@ -220,7 +222,7 @@ surface.addEventListener('wheel',ev=>{ev.preventDefault();ev.stopPropagation();s
     }
   },{capture:true});
 });
-distEl.addEventListener('input',()=>{stopPlay();applyDistance()});scaleEl.addEventListener('input',applyScale);aaEl.addEventListener('input',applyAA);speedEl.addEventListener('input',()=>{playSpeedDeg=Number(speedEl.value);document.getElementById('speedValue').textContent=playSpeedDeg.toFixed(1)+'\u00b0/s'});
+distEl.addEventListener('input',()=>{if(distanceLocked)return;stopPlay();applyDistance()});document.getElementById('distLock').addEventListener('click',()=>{distanceLocked=!distanceLocked;distEl.disabled=distanceLocked;const b=document.getElementById('distLock');b.classList.toggle('locked',distanceLocked);b.innerHTML=distanceLocked?'&#128274;':'&#128275;';b.title=distanceLocked?'Снять фиксацию дистанции':'Зафиксировать дистанцию';b.setAttribute('aria-pressed',String(distanceLocked));showToast(distanceLocked?'Дистанция зафиксирована 🔒':'Дистанция разблокирована 🔓')});scaleEl.addEventListener('input',applyScale);aaEl.addEventListener('input',applyAA);speedEl.addEventListener('input',()=>{playSpeedDeg=Number(speedEl.value);document.getElementById('speedValue').textContent=playSpeedDeg.toFixed(1)+'\u00b0/s'});
 document.getElementById('panelToggle').addEventListener('click',()=>{const p=document.getElementById('panel');p.classList.toggle('collapsed');axesCanvas.classList.toggle('shifted',!p.classList.contains('collapsed'))});document.getElementById('toolAxes').addEventListener('click',toggleAxes);document.getElementById('axesToggle2').addEventListener('click',toggleAxes);
 document.getElementById('upZ').addEventListener('click',()=>setUpAxis('Z'));
 document.getElementById('upMinusZ').addEventListener('click',()=>setUpAxis('-Z'));
@@ -229,7 +231,7 @@ document.getElementById('upMinusY').addEventListener('click',()=>setUpAxis('-Y')
 document.getElementById('upX').addEventListener('click',()=>setUpAxis('X'));
 document.getElementById('upMinusX').addEventListener('click',()=>setUpAxis('-X'));document.getElementById('toolPlay').addEventListener('click',()=>playOn?stopPlay():startPlay());document.getElementById('toolHome').addEventListener('click',resetCamera);document.getElementById('toolReset').addEventListener('click',resetAll);document.getElementById('reset2').addEventListener('click',resetCamera);/* pivotReset removed */document.getElementById('sort').addEventListener('click',()=>{sortIndex=(sortIndex+1)%sortModes.length;applySort()});document.getElementById('mode').addEventListener('click',()=>{perspective=!perspective;applyMode()});document.getElementById('saveView').addEventListener('click',saveView);document.getElementById('loadView').addEventListener('click',loadView);document.getElementById('copyLink').addEventListener('click',copyLink);document.getElementById('clearView').addEventListener('click',()=>{localStorage.removeItem('3XyzMedia_single_view_v3');showShareUrl('');showToast('\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u043e')});
 window.addEventListener('resize',()=>{updateView();drawAxes()});window.addEventListener('keydown',ev=>{if(ev.key==='r'||ev.key==='R')resetCamera();if(ev.code==='Space'&&!ev.repeat){ev.preventDefault();playOn?stopPlay():startPlay()}});
-async function init(){await loadPivotFile();const fromURL=loadURLState();if(!fromURL){setUpAxis('Z')}else{showShareUrl(currentShareUrl())}}
-embedpano({target:'pano',xml:'scene.xml',html5:'only+webgl',focus:true,mobilescale:1,bgcolor:'#05070b',onready:async function(krpano){k=krpano;await init();const _p=document.getElementById('panel');axesCanvas.classList.toggle('shifted',!_p.classList.contains('collapsed'));drawAxes();showToast('3XyzMedia RGB Bridge\u2122 v4.17 \u0433\u043e\u0442\u043e\u0432 \u2713')}});
+async function init(){await loadPivotFile();const fromURL=loadURLState();if(!fromURL){setUpAxis('Z')}else{showShareUrl(currentShareUrl())}sharedStartState=state()}
+embedpano({target:'pano',xml:'scene.xml',html5:'only+webgl',focus:true,mobilescale:1,bgcolor:'#05070b',onready:async function(krpano){k=krpano;await init();const _p=document.getElementById('panel');axesCanvas.classList.toggle('shifted',!_p.classList.contains('collapsed'));drawAxes();showToast('3XyzMedia RGB Bridge\u2122 v4.18 \u0433\u043e\u0442\u043e\u0432 \u2713')}});
 </script>
 </body></html>
