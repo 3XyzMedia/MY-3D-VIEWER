@@ -105,7 +105,7 @@ function updateView(){
 function applyDistance(){const m=sliderToMultiplier(Number(distEl.value));distance=BASE_DISTANCE*m;document.getElementById('distValue').textContent=(m<1?m.toFixed(4):m.toFixed(2))+'\u00d7';updateView()}
 function applyScale(){const v=Number(scaleEl.value);document.getElementById('scaleValue').textContent=v.toFixed(2)+'\u00d7';if(k)k.set('display.splats.scale',v)}
 function applyAA(){const v=Number(aaEl.value);document.getElementById('aaValue').textContent=v.toFixed(2)+' px';if(k)k.set('image.splats.antialias',v)}
-function applySort(){if(!k)return;const s=sortModes[sortIndex];k.set('display.splats.sortmode',s[0]);document.getElementById('sort').textContent=s[1]}
+function applySort(){if(!k)return;const s=sortModes[sortIndex];k.set('display.splats.sortmode',s);document.getElementById('sort').textContent=s}
 function applyMode(){if(!k)return;k.set('display.splats.rendermode',perspective?'perspective':'standard');document.getElementById('mode').textContent=perspective?'MODE: PERSPECTIVE':'MODE: STANDARD'}
 function toggleAxes(){axesOn=!axesOn;axesCanvas.style.display=axesOn?'block':'none';document.getElementById('axesToggle2').textContent='XYZ: '+(axesOn?'ON':'OFF');document.getElementById('axesValue').textContent=axesOn?'ON':'OFF';drawAxes()}
 function drawAxes(){if(!axesOn||!k)return; const c=cameraState(),w=132,h=132,cx=w/2,cy=h/2,L=40; ctx.clearRect(0,0,w,h);
@@ -124,26 +124,25 @@ function setPivotFromCursor(){return false}
 function resetCamera(){stopPlay();playAngle=0;pan={x:0,y:0,z:0};yaw=0;pitch=0;roll=0;distance=BASE_DISTANCE;distEl.value=430;const base=upAxisRotations[upAxis];if(k){k.set('image.splats.rx',base.rx);k.set('image.splats.ry',base.ry);k.set('image.splats.rz',base.rz);k.call('display.splats.update();');k.set('control.locked','true')}applyDistance();showToast('HOME \u2713')}
 function resetAll(){stopPlay();pivot={x:0,y:0,z:0};updatePivotUI();resetCamera();scaleEl.value=.25;aaEl.value=.30;applyScale();applyAA();sortIndex=0;perspective=true;applySort();applyMode();setUpAxis('Z');showShareUrl('')}
 function state(){return {p:[pivot.x,pivot.y,pivot.z],o:[yaw,pitch,roll],d:distance,m:[pan.x,pan.y,pan.z],s:Number(scaleEl.value),a:Number(aaEl.value),q:sortIndex,r:perspective?1:0}}
-function encodeState(st){const buf=new ArrayBuffer(45),dv=new DataView(buf);dv.setUint8(0,1);let off=1;for(const n of [st.p[0],st.p[1],st.p[2],st.o[0],st.o[1],st.o[2],st.d,st.m[0],st.m[1],st.m[2]]){dv.setFloat32(off,n,true);off+=4}dv.setUint8(41,Math.round(clamp(st.s*100,1,100)));dv.setUint8(42,Math.round(clamp(st.a*20,0,40)));dv.setUint8(43,clamp(st.q|0,0,3));dv.setUint8(44,st.r?1:0);return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
-function decodeState(token){try{token=token.replace(/-/g,'+').replace(/_/g,'/');while(token.length%4)token+='=';const b=atob(token),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);const dv=new DataView(u.buffer);if(dv.getUint8(0)!==1||u.length<45)return null;let off=1,a=[];for(let i=0;i<10;i++){a.push(dv.getFloat32(off,true));off+=4}return {p:a.slice(0,3),o:a.slice(3,6),d:a[6],m:a.slice(7,10),s:u[41],a:u[42],q:u[43],r:u[44]}}catch(e){return null}}
+function encodeState(st){const buf=new ArrayBuffer(45),dv=new DataView(buf);dv.setUint8(0,1);let off=1;for(const n of [st.p,st.p,st.p,st.o,st.o,st.o,st.d,st.m,st.m,st.m]){dv.setFloat32(off,n,true);off+=4}dv.setUint8(41,Math.round(clamp(st.s*100,1,100)));dv.setUint8(42,Math.round(clamp(st.a*20,0,40)));dv.setUint8(43,clamp(st.q|0,0,3));dv.setUint8(44,st.r?1:0);return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+\$/,'')}
+function decodeState(token){try{token=token.replace(/-/g,'+').replace(/_/g,'/');while(token.length%4)token+='=';const b=atob(token),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);const dv=new DataView(u.buffer);if(dv.getUint8(0)!==1||u.length<45)return null;let off=1,a=;for(let i=0;i<10;i++){a.push(dv.getFloat32(off,true));off+=4}return {p:a.slice(0,3),o:a.slice(3,6),d:a,m:a.slice(7,10),s:u,a:u,q:u,r:u}}catch(e){return null}}
 function currentShareUrl(){return location.origin+location.pathname+'?v='+encodeState(state())}
 function showShareUrl(url){document.getElementById('shareUrl').value=url;shareLinkEl.href=url;shareLinkEl.textContent=url?'\u2197 \u041e\u0442\u043a\u0440\u044b\u0442\u044c \u044d\u0442\u0443 \u0441\u0441\u044b\u043b\u043a\u0443':'\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u044d\u0442\u0443 \u0441\u0441\u044b\u043b\u043a\u0443'}
 async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}}
 function copyLink(){const url=currentShareUrl();history.replaceState(null,'',url);showShareUrl(url);copyText(url).then(()=>showToast('\u0421\u0441\u044b\u043b\u043a\u0430 \u0441\u043a\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u0430 \u2713'))}
-function applyState(st){if(!st)return;pivot={x:st.p[0],y:st.p[1],z:st.p[2]};yaw=st.o[0];pitch=st.o[1];roll=st.o[2];distance=st.d;pan={x:st.m[0],y:st.m[1],z:st.m[2]};scaleEl.value=clamp(st.s/100,.01,1);aaEl.value=clamp(st.a/20,0,2);sortIndex=clamp(st.q|0,0,3);perspective=!!st.r;distEl.value=multiplierToSlider(distance/BASE_DISTANCE);updatePivotUI();applyDistance();applyScale();applyAA();applySort();applyMode()}
+function applyState(st){if(!st)return;pivot={x:st.p,y:st.p,z:st.p};yaw=st.o;pitch=st.o;roll=st.o;distance=st.d;pan={x:st.m,y:st.m,z:st.m};scaleEl.value=clamp(st.s/100,.01,1);aaEl.value=clamp(st.a/20,0,2);sortIndex=clamp(st.q|0,0,3);perspective=!!st.r;distEl.value=multiplierToSlider(distance/BASE_DISTANCE);updatePivotUI();applyDistance();applyScale();applyAA();applySort();applyMode()}
 function loadURLState(){const t=new URLSearchParams(location.search).get('v');if(!t)return false;const st=decodeState(t);if(st){applyState(st);return true}return false}
 function saveView(){const st=state();localStorage.setItem('3XyzMedia_single_view_v3',JSON.stringify(st));showShareUrl(currentShareUrl());showToast('\u0412\u0438\u0434 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u2713')}
 function loadView(){const raw=localStorage.getItem('3XyzMedia_single_view_v3');if(!raw){showToast('\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u043e\u0433\u043e \u0432\u0438\u0434\u0430 \u043d\u0435\u0442');return}try{applyState(JSON.parse(raw));showShareUrl(currentShareUrl());showToast('\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u0432\u0438\u0434 \u043e\u0442\u043a\u0440\u044b\u0442 \u2713')}catch(e){showToast('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u0432\u0438\u0434')}}
 function showToast(s){const t=document.getElementById('toast');t.textContent=s;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1400)}
 
+// --- Мышь и клавиатура (без изменений) ---
 surface.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation()});
 surface.addEventListener('pointerdown',ev=>{ev.stopPropagation();if(k)k.set('control.locked','true');stopPlay();dragging=true;startX=ev.clientX;startY=ev.clientY;startYaw=yaw;startPitch=pitch;startRoll=roll;startPan={...pan};surface.classList.add('dragging');surface.setPointerCapture(ev.pointerId);if(ev.button===0){if(ev.shiftKey){dragMode='roll';startRollAngle=screenRollAngle(ev.clientX,ev.clientY)}else dragMode='orbit'}else if(ev.button===1||ev.button===2)dragMode='pan';else dragMode=null});
 surface.addEventListener('pointermove',ev=>{ev.stopPropagation();if(!dragging)return;const dx=ev.clientX-startX,dy=ev.clientY-startY;if(dragMode==='orbit'){yaw=startYaw+dx*.32;pitch=clamp(startPitch-dy*.24,-179,179);updateView()}else if(dragMode==='roll'){roll=startRoll+deg(screenRollAngle(ev.clientX,ev.clientY)-startRollAngle);updateView()}else if(dragMode==='pan'){const c=cameraState();const s=Math.max(.00001,distance*.0024);const tX=dx*s,tY=-dy*s;pan.x=startPan.x+c.right.x*tX+c.up.x*tY;pan.y=startPan.y+c.right.y*tX+c.up.y*tY;pan.z=startPan.z+c.right.z*tX+c.up.z*tY;updateView()}});
 surface.addEventListener('pointerup',ev=>{ev.stopPropagation();dragging=false;dragMode=null;surface.classList.remove('dragging');try{surface.releasePointerCapture(ev.pointerId)}catch(e){}if(k)k.set('control.locked','true')});
 surface.addEventListener('pointercancel',()=>{dragging=false;dragMode=null;surface.classList.remove('dragging');if(k)k.set('control.locked','true')});
 surface.addEventListener('wheel',ev=>{ev.preventDefault();ev.stopPropagation();stopPlay();const factor=ev.deltaY>0?1.085:1/1.085;distance=clamp(distance*factor,BASE_DISTANCE*.00001,BASE_DISTANCE*100000);distEl.value=multiplierToSlider(distance/BASE_DISTANCE);applyDistance()},{passive:false});
-/* dblclick removed */
-/* Block ALL mouse events from bubbling to krpano (it listens on window/document) */
 ['mousedown','mouseup','mousemove','click','dblclick'].forEach(function(t){
   surface.addEventListener(t,function(e){
     e.stopPropagation();
@@ -152,7 +151,6 @@ surface.addEventListener('wheel',ev=>{ev.preventDefault();ev.stopPropagation();s
     }
   });
 });
-/* Capture-phase block on document: intercept BEFORE krpano gets the event */
 ['mousedown','mouseup','mousemove','click','dblclick'].forEach(function(t){
   document.addEventListener(t,function(e){
     if(e.target===surface||surface.contains(e.target)){
@@ -170,7 +168,88 @@ document.getElementById('upMinusY').addEventListener('click',()=>setUpAxis('-Y')
 document.getElementById('upX').addEventListener('click',()=>setUpAxis('X'));
 document.getElementById('upMinusX').addEventListener('click',()=>setUpAxis('-X'));document.getElementById('toolPlay').addEventListener('click',()=>playOn?stopPlay():startPlay());document.getElementById('toolHome').addEventListener('click',resetCamera);document.getElementById('toolReset').addEventListener('click',resetAll);document.getElementById('reset2').addEventListener('click',resetCamera);/* pivotReset removed */document.getElementById('sort').addEventListener('click',()=>{sortIndex=(sortIndex+1)%sortModes.length;applySort()});document.getElementById('mode').addEventListener('click',()=>{perspective=!perspective;applyMode()});document.getElementById('saveView').addEventListener('click',saveView);document.getElementById('loadView').addEventListener('click',loadView);document.getElementById('copyLink').addEventListener('click',copyLink);document.getElementById('clearView').addEventListener('click',()=>{localStorage.removeItem('3XyzMedia_single_view_v3');showShareUrl('');showToast('\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u043e')});
 window.addEventListener('resize',()=>{updateView();drawAxes()});window.addEventListener('keydown',ev=>{if(ev.key==='r'||ev.key==='R')resetCamera();if(ev.code==='Space'&&!ev.repeat){ev.preventDefault();playOn?stopPlay():startPlay()}});
+
+// --- МОБИЛЬНЫЕ ТАЧ-СОБЫТИЯ (новые) ---
+const touchState = {
+  startX: 0, startY: 0,
+  startYaw: 0, startPitch: 0,
+  startPanX: 0, startPanY: 0, startPanZ: 0,
+  startDist: 0,
+  isDragging: false,
+  touchCount: 0
+};
+
+// Блокируем стандартное поведение браузера для тач-событий
+surface.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const touches = e.touches;
+  touchState.touchCount = touches.length;
+  
+  if (touches.length === 1) {
+    // Один палец: орбита
+    touchState.isDragging = true;
+    touchState.startX = touches.clientX;
+    touchState.startY = touches.clientY;
+    touchState.startYaw = yaw;
+    touchState.startPitch = pitch;
+    stopPlay();
+    if (k) k.set('control.locked', 'true');
+  } else if (touches.length === 2) {
+    // Два пальца: зум
+    touchState.isDragging = true;
+    const dx = touches.clientX - touches.clientX;
+    const dy = touches.clientY - touches.clientY;
+    touchState.startDist = Math.hypot(dx, dy);
+    stopPlay();
+    if (k) k.set('control.locked', 'true');
+  }
+}, { passive: false });
+
+surface.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const touches = e.touches;
+  
+  if (!touchState.isDragging) return;
+  
+  if (touches.length === 1) {
+    // Орбита
+    const dx = touches.clientX - touchState.startX;
+    const dy = touches.clientY - touchState.startY;
+    yaw = touchState.startYaw + dx * 0.32;
+    pitch = clamp(touchState.startPitch - dy * 0.24, -179, 179);
+    updateView();
+  } else if (touches.length === 2) {
+    // Зум
+    const dx = touches.clientX - touches.clientX;
+    const dy = touches.clientY - touches.clientY;
+    const currentDist = Math.hypot(dx, dy);
+    const factor = currentDist / touchState.startDist;
+    // Ограничиваем зум, чтобы не улететь в бесконечность
+    const zoomFactor = Math.max(0.9, Math.min(1.1, factor));
+    distance = clamp(distance * zoomFactor, BASE_DISTANCE * 0.00001, BASE_DISTANCE * 100000);
+    distEl.value = multiplierToSlider(distance / BASE_DISTANCE);
+    applyDistance();
+  }
+}, { passive: false });
+
+surface.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  touchState.isDragging = false;
+  touchState.touchCount = e.changedTouches.length;
+  if (k) k.set('control.locked', 'true');
+});
+
+surface.addEventListener('touchcancel', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  touchState.isDragging = false;
+  if (k) k.set('control.locked', 'true');
+});
+
 async function init(){await loadPivotFile();const fromURL=loadURLState();if(!fromURL){setUpAxis('Z')}else{showShareUrl(currentShareUrl())}}
-embedpano({target:'pano',xml:'scene.xml',html5:'only+webgl',focus:true,mobilescale:1,bgcolor:'#05070b',onready:async function(krpano){k=krpano;await init();const _p=document.getElementById('panel');axesCanvas.classList.toggle('shifted',!_p.classList.contains('collapsed'));drawAxes();showToast('3XyzMedia RGB Bridge\u2122 v4.14 \u0433\u043e\u0442\u043e\u0432 \u2713')}});
+embedpano({target:'pano',xml:'scene.xml',html5:'only+webgl',focus:true,mobilescale:1,bgcolor:'#05070b',onready:async function(krpano){k=krpano;await init();const _p=document.getElementById('panel');axesCanvas.classList.toggle('shifted',!_p.classList.contains('collapsed'));drawAxes();showToast('3XyzMedia RGB Bridge\u2122 v4.14 \u0433\u043e\u0442\u043e\u0432 \u043e\u0432 \u2713')}});
 </script>
 </body></html>
