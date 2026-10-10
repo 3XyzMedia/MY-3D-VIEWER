@@ -2,319 +2,182 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3XyzMedia RGB Bridge™ — Gaussian Viewer</title>
+    <title>3XyzMedia Viewer — Fixed Build</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: system-ui, -apple-system, sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         #pano { width: 100vw; height: 100vh; display: block; }
         
-        /* UI Panel Styles */
+        /* Панель управления */
         #ui-panel {
-            position: absolute; top: 10px; right: 10px; width: 320px;
-            background: rgba(20, 20, 25, 0.85); backdrop-filter: blur(10px);
-            border-radius: 12px; padding: 15px; color: #e0e0e0;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+            position: absolute; top: 10px; right: 10px; width: 300px;
+            background: rgba(10, 10, 15, 0.9); color: #fff;
+            padding: 15px; border-radius: 8px;
             display: flex; flex-direction: column; gap: 12px;
-            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            z-index: 100;
         }
-        .ui-group h3 { margin: 0 0 8px 0; font-size: 14px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
-        .slider-row { display: flex; flex-direction: column; gap: 4px; }
-        label { font-size: 12px; color: #ccc; }
-        input[type=range] { accent-color: #4facfe; }
+        h4 { margin: 0 0 10px 0; color: #aaa; font-size: 13px; text-transform: uppercase; }
         
-        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .slider-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 11px; color: #888; }
+        input[type=range] { accent-color: #00d2ff; }
+        .val-display { float: right; color: #00d2ff; font-weight: bold; }
+        
+        .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
         button {
-            background: #2b2b32; border: 1px solid #444; color: #fff;
-            padding: 6px 12px; border-radius: 6px; cursor: pointer;
+            background: #222; border: 1px solid #444; color: #fff;
+            padding: 6px 10px; border-radius: 4px; cursor: pointer;
             font-size: 12px; transition: 0.2s;
         }
-        button:hover { background: #3a3a44; border-color: #666; }
-        button.primary { background: #4facfe; border-color: #4facfe; color: #000; font-weight: bold; }
-        button.primary:hover { background: #3a9cde; }
+        button:hover { background: #444; border-color: #666; }
+        button.primary { background: #00d2ff; color: #000; font-weight: bold; }
+        button.primary:hover { background: #00aacc; }
 
-        /* Top Bar */
+        /* Верхняя панель */
         #top-bar {
-            position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; z-index: 1000;
+            position: absolute; top: 10px; left: 10px;
+            display: flex; gap: 8px; z-index: 100;
         }
         .top-btn {
-            background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);
-            padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;
+            background: rgba(255,255,255,0.1); color: white;
+            padding: 8px 12px; border-radius: 6px; cursor: pointer;
         }
-        .top-btn:hover { background: rgba(255,255,255,0.2); }
-        .top-btn.active { background: #4facfe; border-color: #4facfe; color: #000; }
+        .top-btn.active { background: #00d2ff; color: #000; }
 
-        /* Info Box */
-        #info-box {
-            position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6);
-            padding: 8px 12px; border-radius: 6px; color: #aaa; font-size: 12px;
+        /* Подсказка внизу */
+        #hints {
+            position: absolute; bottom: 10px; left: 10px;
+            background: rgba(0,0,0,0.7); padding: 8px 12px;
+            border-radius: 6px; color: #888; font-size: 12px;
             pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- Top Controls -->
+    <!-- Верхняя панель -->
     <div id="top-bar">
         <div class="top-btn" id="btn-xyz">XYZ</div>
         <button class="top-btn primary" id="btn-play">▶ PLAY</button>
-        <button class="top-btn" id="btn-reset-cam">🔄</button>
-        <button class="top-btn" id="btn-settings">⚙️</button>
+        <button class="top-btn" id="btn-home">🏠 HOME</button>
     </div>
 
-    <!-- 360 Viewer Container -->
+    <!-- Область просмотра -->
     <div id="pano"></div>
 
-    <!-- UI Panel -->
-    <div id="ui-panel" style="display: none;">
-        <div class="ui-group">
-            <h3>Camera Controls</h3>
-            <div class="slider-row">
-                <label>Camera distance (<span id="val-dist">1.00</span>×)</label>
-                <input type="range" id="slider-dist" min="0.005" max="100000" step="0.001" value="1">
+    <!-- Панель настроек -->
+    <div id="ui-panel">
+        <div>
+            <h4>Camera</h4>
+            <div class="slider-group">
+                <label>Distance <span id="v-dist" class="val-display">1.00</span></label>
+                <input type="range" id="s-dist" min="0.01" max="1000" step="0.01" value="1">
             </div>
-            <div class="slider-row">
-                <label>Splat size (<span id="val-splat">0.25</span>×)</label>
-                <input type="range" id="slider-splat" min="0.01" max="10" step="0.01" value="0.25">
+            <div class="slider-group">
+                <label>Splat Size <span id="v-splat" class="val-display">0.25</span></label>
+                <input type="range" id="s-splat" min="0.01" max="10" step="0.01" value="0.25">
             </div>
-            <div class="slider-row">
-                <label>Screen minimum (<span id="val-screen">0.30</span> px)</label>
-                <input type="range" id="slider-screen" min="0.01" max="10" step="0.01" value="0.3">
-            </div>
-            <div class="slider-row">
-                <label>PLAY speed (<span id="val-speed">3.0</span>°/s)</label>
-                <input type="range" id="slider-speed" min="0.1" max="360" step="0.1" value="3">
+            <div class="slider-group">
+                <label>Screen Min <span id="v-screen" class="val-display">0.30</span></label>
+                <input type="range" id="s-screen" min="0.01" max="10" step="0.01" value="0.3">
             </div>
         </div>
 
-        <div class="ui-group">
-            <h3>World Axes</h3>
+        <div>
+            <h4>Animation</h4>
+            <div class="slider-group">
+                <label>Speed <span id="v-speed" class="val-display">3.0</span>°/s</label>
+                <input type="range" id="s-speed" min="0.1" max="360" step="0.1" value="3">
+            </div>
             <div class="btn-row">
-                <button id="btn-axis-xyz" class="primary">XYZ: ON</button>
+                <button id="btn-axis">XYZ: ON</button>
             </div>
-            <p style="font-size:10px; color:#666; margin:0;">Показывает мировые X/Y/Z (Z к зрителю).</p>
         </div>
 
-        <div class="ui-group">
-            <h3>Up axis (к зрителю)</h3>
-            <div class="btn-row" id="axis-buttons">
-                <button class="primary">Z (AutoCAD)</button>
-                <button>Z'</button>
-                <button>Y</button>
-                <button>Y'</button>
-                <button>X</button>
-                <button>X'</button>
-            </div>
-            <p style="font-size:10px; color:#666; margin:0;">Выберите ось, направленную к зрителю (+). Применяется сразу.</p>
-        </div>
-
-        <div class="btn-row">
-            <button>SORT: DISTANCE</button>
-            <button>MODE: PERSPECTIVE</button>
-        </div>
-        <button class="primary" id="btn-home">HOME — Сброс</button>
+        <button class="primary" style="width: 100%;">SORT: DISTANCE</button>
     </div>
 
-    <!-- Info Footer -->
-    <div id="info-box">
-        ЛКМ — orbit · ПКМ/ММВ — pan · колесо — zoom · Shift+ЛКМ — roll<br>
-        PLAY — плавный круг · HOME — сброс
+    <div id="hints">
+        ЛКМ — вращать · ПКМ — двигать · Колесо — зум<br>
+        PLAY — авто-вращение · HOME — сброс
     </div>
 
-    <!-- krpano Engine -->
+    <!-- Подключаем движок -->
     <script src="krpano.js"></script>
     
-    <!-- Main Logic -->
     <script>
-        // --- CONFIG ---
-        const CONFIG = {
-            sceneFile: 'scene.xml',
-            modelFile: 'model/micro.ply',
-            pivotFile: 'model/pivot.json'
-        };
-
-        // --- STATE ---
-        let krInstance = null;
+        // --- ИНИЦИАЛИЗАЦИЯ ---
+        let kr = null;
         let isPlaying = false;
-        let animationFrameId = null;
-        let currentUpAxis = 'Z';
+        let animFrame = null;
 
-        // --- INIT ---
-        function init() {
-            console.log('Initializing viewer...');
-            
-            // Check if krpano is loaded
-            if (typeof krpano === 'undefined') {
-                console.error('krpano.js not found! Check file path.');
-                alert('Ошибка: krpano.js не найден. Убедитесь, что файл лежит рядом с index.html.');
-                return;
+        // Запускаем krpano
+        krpano({
+            target: 'pano',
+            xml: 'scene.xml', // Убедись, что этот файл лежит рядом!
+            onready: function(instance) {
+                kr = instance;
+                console.log('✅ Krpano loaded successfully');
+                setupControls();
+            },
+            onerror: function(msg) {
+                console.error('❌ Krpano Error:', msg);
+                alert('Ошибка загрузки сцены. Проверь, лежит ли scene.xml рядом с index.html');
             }
+        });
 
-            // Embed krpano
-            krpano({
-                target: 'pano',
-                xml: CONFIG.sceneFile,
-                onready: onKrpanoReady,
-                onerror: (msg) => console.error('Krpano Error:', msg)
-            });
-        }
-
-        function onKrpanoReady(instance) {
-            krInstance = instance;
-            console.log('Krpano ready. Instance:', krInstance);
+        // --- НАСТРОЙКА КОНТРОЛОВ ---
+        function setupControls() {
+            // Ползунки
+            bindSlider('s-dist', 'v-dist', (val) => { if(kr) kr.set('view.tx', val * 100); }); // Пример маппинга
+            bindSlider('s-splat', 'v-splat', (val) => { if(kr) kr.set('splats.scale', val); });
+            bindSlider('s-screen', 'v-screen', (val) => { if(kr) kr.set('splats.antialias', val); });
             
-            // Setup UI
-            setupUI();
-            
-            // Initial load check
-            checkModelLoad();
-            
-            // Show UI
-            document.getElementById('ui-panel').style.display = 'flex';
-        }
-
-        function checkModelLoad() {
-            // Simple check: try to get a property. 
-            // In a real app, you'd listen to specific krpano events for splat loading.
-            setTimeout(() => {
-                if (!krInstance) return;
-                console.log('Model should be loading... Check Network tab for micro.ply');
-            }, 1000);
-        }
-
-        // --- UI SETUP ---
-        function setupUI() {
-            // Sliders
-            bindSlider('slider-dist', 'val-dist', (v) => { if(krInstance) krInstance.set('view.tx', v*100); }); // Approx mapping
-            bindSlider('slider-splat', 'val-splat', (v) => { if(krInstance) krInstance.set('splats.scale', v); });
-            bindSlider('slider-screen', 'val-screen', (v) => { if(krInstance) krInstance.set('splats.antialias', v); });
-            bindSlider('slider-speed', 'val-speed', (v) => { /* Handled in play logic */ });
-
-            // Buttons
+            // Кнопки
             document.getElementById('btn-play').addEventListener('click', togglePlay);
-            document.getElementById('btn-home').addEventListener('click', resetView);
-            document.getElementById('btn-reset-cam').addEventListener('click', resetView);
-            
-            // Axis Buttons
-            const axisBtns = document.querySelectorAll('#axis-buttons button');
-            axisBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    axisBtns.forEach(b => b.classList.remove('primary'));
-                    e.target.classList.add('primary');
-                    currentUpAxis = e.target.innerText.split(' '); // Get Z, Y, X
-                    console.log('Up Axis set to:', currentUpAxis);
-                    // Here you would call a krpano action to rotate the model based on axis
-                });
+            document.getElementById('btn-home').addEventListener('click', () => {
+                if(kr) kr.call('resetview()');
             });
-
-            // Settings Toggle
-            document.getElementById('btn-settings').addEventListener('click', () => {
-                const panel = document.getElementById('ui-panel');
-                panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+            
+            document.getElementById('btn-axis').addEventListener('click', (e) => {
+                e.target.innerText = e.target.innerText.includes('ON') ? 'XYZ: OFF' : 'XYZ: ON';
             });
         }
 
         function bindSlider(id, valId, callback) {
-            const slider = document.getElementById(id);
-            const valEl = document.getElementById(valId);
-            slider.addEventListener('input', (e) => {
+            const s = document.getElementById(id);
+            const v = document.getElementById(valId);
+            s.addEventListener('input', (e) => {
                 const val = parseFloat(e.target.value);
-                valEl.innerText = val.toFixed(2).replace('.', ',');
+                v.innerText = val.toFixed(2).replace('.', ',');
                 callback(val);
             });
         }
 
-        // --- CORE LOGIC ---
-
+        // --- ЛОГИКА PLAY ---
         function togglePlay() {
             isPlaying = !isPlaying;
             const btn = document.getElementById('btn-play');
+            const speed = parseFloat(document.getElementById('s-speed').value);
+            
             if (isPlaying) {
                 btn.innerText = '⏸ PAUSE';
                 btn.style.background = '#ff4757';
-                startRotation();
+                animate();
             } else {
                 btn.innerText = '▶ PLAY';
-                btn.style.background = '#4facfe';
-                stopRotation();
+                btn.style.background = '#00d2ff';
+                if(animFrame) cancelAnimationFrame(animFrame);
             }
         }
 
-        function startRotation() {
-            const speed = parseFloat(document.getElementById('slider-speed').value);
-            const hlookat = krInstance ? krInstance.get('view.hlookat') : 0;
-            
-            function animate() {
-                if (!isPlaying || !krInstance) return;
-                const currentH = krInstance.get('view.hlookat');
-                const newH = (currentH + speed) % 360;
-                krInstance.set('view.hlookat', newH);
-                animationFrameId = requestAnimationFrame(animate);
-            }
-            animate();
+        function animate() {
+            if (!isPlaying || !kr) return;
+            const currentH = kr.get('view.hlookat');
+            const newH = (currentH + parseFloat(document.getElementById('s-speed').value)) % 360;
+            kr.set('view.hlookat', newH);
+            animFrame = requestAnimationFrame(animate);
         }
-
-        function stopRotation() {
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-        }
-
-        function resetView() {
-            if (!krInstance) return;
-            krInstance.call('resetview()');
-            // Reset sliders to default visually if needed
-            document.getElementById('slider-dist').value = 1;
-            document.getElementById('val-dist').innerText = "1,00";
-        }
-
-        // --- FIXED decodeState FUNCTION (The one that was broken) ---
-        function decodeState(token) {
-            try {
-                if (!token) return null;
-                
-                // Fix base64 padding and chars
-                token = token.replace(/-/g, '+').replace(/_/g, '/');
-                while (token.length % 4) token += '=';
-                
-                const b = atob(token);
-                const u = new Uint8Array(b.length);
-                for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
-                
-                const dv = new DataView(u.buffer);
-                
-                // Validate header
-                if (dv.getUint8(0) !== 1 || u.length < 45) return null;
-                
-                let off = 1;
-                let a = ; // <--- FIX: Initialized as empty array
-                
-                // Read 10 floats
-                for (let i = 0; i < 10; i++) {
-                    a.push(dv.getFloat32(off, true));
-                    off += 4;
-                }
-                
-                return {
-                    hlookat: a,
-                    vlookat: a,
-                    fov: a,
-                    tx: a,
-                    ty: a,
-                    tz: a,
-                    rx: a,
-                    ry: a,
-                    rz: a,
-                    scale: a
-                };
-            } catch (e) {
-                console.error('Error decoding state:', e);
-                return null;
-            }
-        }
-
-        // Start App
-        init();
     </script>
 </body>
 </html>
